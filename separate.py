@@ -1,8 +1,8 @@
 import soundfile as sf
-import torch 
 import os 
 import librosa
 import numpy as np
+import torch 
 import onnxruntime as ort
 from pathlib import Path
 from argparse import ArgumentParser
@@ -74,8 +74,7 @@ class Predictor:
             dim_t=args["dim_t"], 
             n_fft=args["n_fft"]
         )
-        
-        self.model = ort.InferenceSession(args['model_path'])
+        self.model = ort.InferenceSession(args['model_path'], providers=["CUDAExecutionProvider"])
 
     def demix(self, mix):
         samples = mix.shape[-1]
@@ -199,13 +198,14 @@ def main():
     os.makedirs(args.output, exist_ok=True)
     
     for file_path in args.files:  
-      predictor = Predictor(args=dict_args)
-      vocals, no_vocals, sampling_rate = predictor.predict(file_path)
-    
-      sf.write(os.path.join(args.output, "no_vocals.wav"), no_vocals, sampling_rate)
-      sf.write(os.path.join(args.output, "vocals.wav"), vocals, sampling_rate)
+        predictor = Predictor(args=dict_args)
+        vocals, no_vocals, sampling_rate = predictor.predict(file_path)
+
+        pathname = os.path.splitext(file_path)[0]
+        filename_split = pathname.split('\\')
+        filename = filename_split[-1]
+        sf.write(os.path.join(args.output, filename+"_no_vocals.mp3"), no_vocals, sampling_rate, None, None, 'mp3')
+        sf.write(os.path.join(args.output, filename+"_vocals.mp3"), vocals, sampling_rate, None, None, 'mp3')
   
 if __name__ == "__main__":
     main()
-  
-   
